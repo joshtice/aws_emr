@@ -1,4 +1,5 @@
 data/
+*.parquet
 .ipynb_checkpoints/
 dl.cfg
 sandbox.ipynb
