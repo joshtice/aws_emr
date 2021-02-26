@@ -3,34 +3,26 @@ import configparser
 from datetime import datetime
 import os
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf, col
+from pyspark.sql.functions import udf, col, monotonically_increasing_id
 from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
-
-
-config = configparser.ConfigParser()
-config.read("dl.cfg")
-
-os.environ['AWS_ACCESS_KEY_ID'] = config['myaws']['AWS_ACCESS_KEY_ID']
-os.environ['AWS_SECRET_ACCESS_KEY'] = config['myaws']['AWS_SECRET_ACCESS_KEY']
+from pyspark.sql.types import TimestampType
 
 
 def get_args():
     """
     Parse command line arguments
-    
+
     Returns
     -------
     argparse.Namespace
         Object containing parsed command line arguments
     """
-    
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('input',
-                        help='s3 bucket with input data')
-    parser.add_argument('output',
-                        help='s3 bucket location to write data')
+    parser.add_argument("input", help="s3 bucket with input data")
+    parser.add_argument("output", help="s3 bucket location to write data")
     args = parser.parse_args()
-    
+
     return args.input, args.output
 
 
@@ -76,9 +68,10 @@ def process_song_data(spark, input_data, output_data):
 
     # write songs table to parquet files partitioned by year and artist
     (
-        songs_table.write.partitionBy("year", "artist_id")
+        songs_table.write.mode("overwrite")
+        .partitionBy("year", "artist_id")
         .format("parquet")
-        .save("songs_table.parquet", header=True)
+        .save(output_data + "songs_table.parquet", header=True)
     )
 
     # extract columns to create artists table
@@ -98,7 +91,9 @@ def process_song_data(spark, input_data, output_data):
     )
 
     # write artists table to parquet files
-    artists_table.write.save("artists_table.parquet", header=True)
+    artists_table.write.mode("overwrite").save(
+        output_data + "artists_table.parquet", header=True
+    )
 
 
 def process_log_data(spark, input_data, output_data):
@@ -116,7 +111,7 @@ def process_log_data(spark, input_data, output_data):
     """
 
     # get filepath to log data file
-    log_data = input_data + "log_data/*.json"
+    log_data = input_data + "log_data/*/*/*.json"
 
     # read log data file
     df = spark.read.json(log_data)
@@ -134,7 +129,9 @@ def process_log_data(spark, input_data, output_data):
     )
 
     # write users table to parquet files
-    users_table.write.save("users_table.parquet", header=True)
+    users_table.write.mode("overwrite").save(
+        output_data + "users_table.parquet", header=True
+    )
 
     # create timestamp column from original timestamp column
     # get_timestamp = udf()
@@ -160,9 +157,10 @@ def process_log_data(spark, input_data, output_data):
 
     # write time table to parquet files partitioned by year and month
     (
-        time_table.write.partitionBy("year", "month")
+        time_table.write.mode("overwrite")
+        .partitionBy("year", "month")
         .format("parquet")
-        .save("time_table.parquet", header=True)
+        .save(output_data + "time_table.parquet", header=True)
     )
 
     # read in song data to use for songplays table
@@ -193,9 +191,10 @@ def process_log_data(spark, input_data, output_data):
 
     # write songplays table to parquet files partitioned by year and month
     (
-        songplays_table.write.partitionBy("year", "month")
+        songplays_table.write.mode("overwrite")
+        .partitionBy("year", "month")
         .format("parquet")
-        .save("songplays_table.parquet", header=True)
+        .save(output_data + "songplays_table.parquet", header=True)
     )
 
 
