@@ -205,6 +205,8 @@ def main():
 
     spark = create_spark_session()
     input_data, output_data = get_args()
+    input_data = input_data if input_data.endswith('/') else input_data + '/'
+    output_data = output_data if output_data.endswith('/') else output_data + '/'
 
     process_song_data(spark, input_data, output_data)
     process_log_data(spark, input_data, output_data)
